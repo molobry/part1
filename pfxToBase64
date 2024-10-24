@@ -1,0 +1,11 @@
+@echo off
+REM Navigate to the directory containing the .pfx files
+cd /path/to/your/certificate/files
+
+REM Loop through all .pfx files in the directory
+for %%f in (*.pfx) do (
+    echo Processing %%f
+    base64 -w 0 "%%f" > "%%~nf.jks.base64"
+    echo %%f has been converted to %%~nf.jks.base64
+)
+pause
