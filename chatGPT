@@ -1,0 +1,158 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDropEvent;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Scanner;
+
+public class ChatGptGuiApp {
+
+    private static final String API_KEY = "YOUR_OPENAI_API_KEY"; // Replace with your OpenAI API Key
+
+    public static void main(String[] args) {
+        // Create the main window (JFrame)
+        JFrame frame = new JFrame("ChatGPT GUI Application");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(500, 500);
+        frame.setLayout(new BorderLayout());
+
+        // Multiline prompt input
+        JLabel promptLabel = new JLabel("Enter Prompt:");
+        JTextArea promptArea = new JTextArea(5, 30);
+        promptArea.setLineWrap(true);
+        promptArea.setWrapStyleWord(true);
+        JScrollPane promptScrollPane = new JScrollPane(promptArea);
+
+        // Drag-and-drop area
+        JLabel dragAndDropLabel = new JLabel("Drag and drop files here", SwingConstants.CENTER);
+        dragAndDropLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        dragAndDropLabel.setPreferredSize(new Dimension(400, 100));
+
+        // Response area (read-only)
+        JLabel responseLabel = new JLabel("Response:");
+        JTextArea responseArea = new JTextArea(10, 30);
+        responseArea.setLineWrap(true);
+        responseArea.setWrapStyleWord(true);
+        responseArea.setEditable(false);
+        JScrollPane responseScrollPane = new JScrollPane(responseArea);
+
+        // Panel to organize prompt input area, drag-and-drop area, and response area
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+
+        // Panel for prompt input and drag-and-drop
+        JPanel inputPanel = new JPanel();
+        inputPanel.setLayout(new BorderLayout());
+        inputPanel.add(promptLabel, BorderLayout.NORTH);
+        inputPanel.add(promptScrollPane, BorderLayout.CENTER);
+        inputPanel.add(dragAndDropLabel, BorderLayout.SOUTH);
+
+        // Add components to the main panel
+        panel.add(inputPanel, BorderLayout.NORTH);
+        panel.add(responseLabel, BorderLayout.CENTER);
+        panel.add(responseScrollPane, BorderLayout.SOUTH);
+
+        // Add the main panel to the frame
+        frame.add(panel, BorderLayout.CENTER);
+
+        // Show the window
+        frame.setVisible(true);
+
+        // Set up drag-and-drop functionality for files
+        dragAndDropLabel.setDropTarget(new DropTarget() {
+            @Override
+            public synchronized void drop(DropTargetDropEvent evt) {
+                try {
+                    evt.acceptDrop(java.awt.dnd.DnDConstants.ACTION_COPY);
+                    List<File> droppedFiles = (List<File>) evt.getTransferable()
+                            .getTransferData(DataFlavor.javaFileListFlavor);
+
+                    // Read the content of each dropped file
+                    StringBuilder fileContent = new StringBuilder();
+                    for (File file : droppedFiles) {
+                        fileContent.append(readFileContent(file)).append("\n");
+                    }
+
+                    // Update the prompt area with the file content
+                    promptArea.setText(promptArea.getText() + "\n" + fileContent.toString());
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    dragAndDropLabel.setText("Error during file drop.");
+                }
+            }
+        });
+
+        // Button to send prompt to ChatGPT
+        JButton sendButton = new JButton("Send to ChatGPT");
+        frame.add(sendButton, BorderLayout.SOUTH);
+        sendButton.addActionListener(e -> {
+            String prompt = promptArea.getText();
+            String response = sendPromptToChatGPT(prompt);
+            responseArea.setText(response);
+        });
+    }
+
+    private static String readFileContent(File file) {
+        StringBuilder content = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                content.append(line).append("\n");
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return content.toString();
+    }
+
+    private static String sendPromptToChatGPT(String prompt) {
+        String response = "";
+        try {
+            // Set up the API URL and connection
+            URL url = new URL("https://api.openai.com/v1/completions");
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("Authorization", "Bearer " + API_KEY);
+            connection.setDoOutput(true);
+
+            // Prepare JSON request payload
+            String payload = "{\"model\":\"text-davinci-003\",\"prompt\":\"" + prompt + "\",\"max_tokens\":150}";
+            try (OutputStream os = connection.getOutputStream()) {
+                os.write(payload.getBytes(StandardCharsets.UTF_8));
+            }
+
+            // Read the response
+            try (Scanner scanner = new Scanner(connection.getInputStream(), StandardCharsets.UTF_8)) {
+                StringBuilder responseBuilder = new StringBuilder();
+                while (scanner.hasNextLine()) {
+                    responseBuilder.append(scanner.nextLine());
+                }
+                response = parseResponse(responseBuilder.toString());
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            response = "Error: Unable to connect to ChatGPT API.";
+        }
+        return response;
+    }
+
+    private static String parseResponse(String jsonResponse) {
+        // Extract response text from JSON
+        try {
+            JSONObject jsonObject = new JSONObject(jsonResponse);
+            return jsonObject.getJSONArray("choices").getJSONObject(0).getString("text").trim();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return "Error parsing response.";
+        }
+    }
+}
