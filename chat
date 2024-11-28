@@ -1,0 +1,103 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.Scanner;
+
+public class ChatGPTApp {
+    public static void main(String[] args) {
+        // Create the main frame
+        JFrame frame = new JFrame("ChatGPT Java App");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(600, 400);
+        
+        // Layout
+        frame.setLayout(new BorderLayout());
+        
+        // Top text area
+        JTextArea inputArea = new JTextArea(5, 40);
+        inputArea.setLineWrap(true);
+        inputArea.setWrapStyleWord(true);
+        JScrollPane inputScroll = new JScrollPane(inputArea);
+        frame.add(inputScroll, BorderLayout.NORTH);
+        
+        // Bottom text area
+        JTextArea outputArea = new JTextArea(10, 40);
+        outputArea.setLineWrap(true);
+        outputArea.setWrapStyleWord(true);
+        outputArea.setEditable(false);
+        JScrollPane outputScroll = new JScrollPane(outputArea);
+        frame.add(outputScroll, BorderLayout.CENTER);
+        
+        // Input field and button
+        JPanel controlPanel = new JPanel();
+        JTextField additionalInput = new JTextField(20);
+        JButton sendButton = new JButton("SEND");
+        controlPanel.add(new JLabel("Additional Words:"));
+        controlPanel.add(additionalInput);
+        controlPanel.add(sendButton);
+        frame.add(controlPanel, BorderLayout.SOUTH);
+        
+        // Action Listener for the SEND button
+        sendButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String query = inputArea.getText();
+                String additionalWords = additionalInput.getText();
+                String fullQuery = query + " " + additionalWords;
+
+                // Call OpenAI API
+                String response = callOpenAI(fullQuery);
+                outputArea.setText(response);
+            }
+        });
+
+        // Display the frame
+        frame.setVisible(true);
+    }
+
+    private static String callOpenAI(String query) {
+        String apiKey = "YOUR_OPENAI_API_KEY"; // Replace with your OpenAI API key
+        String endpoint = "https://api.openai.com/v1/chat/completions";
+        try {
+            // Create JSON payload
+            String jsonInputString = """
+            {
+              "model": "gpt-3.5-turbo",
+              "messages": [{"role": "user", "content": "%s"}],
+              "temperature": 0.7
+            }
+            """.formatted(query);
+
+            // Setup HTTP connection
+            URL url = new URL(endpoint);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+
+            // Send request
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = jsonInputString.getBytes("utf-8");
+                os.write(input, 0, input.length);
+            }
+
+            // Read response
+            StringBuilder response = new StringBuilder();
+            try (Scanner scanner = new Scanner(conn.getInputStream(), "utf-8")) {
+                while (scanner.hasNext()) {
+                    response.append(scanner.nextLine());
+                }
+            }
+
+            return response.toString(); // Return the raw response (can be parsed further)
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return "Error: " + ex.getMessage();
+        }
+    }
+}
