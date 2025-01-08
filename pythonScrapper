@@ -1,0 +1,44 @@
+from playwright.sync_api import sync_playwright
+import openai
+import json
+
+# Extract elements using Playwright
+def extract_elements(url):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(url)
+        
+        elements = page.locator('*').all()  # Extract all elements
+        element_data = []
+        for element in elements:
+            tag_name = element.evaluate('el => el.tagName')
+            attributes = element.evaluate('el => Object.fromEntries([...el.attributes].map(attr => [attr.name, attr.value]))')
+            element_data.append({'tag_name': tag_name, 'attributes': attributes})
+        browser.close()
+        return element_data
+
+# Use GPT to classify elements
+def classify_elements(elements):
+    openai.api_key = "your_openai_api_key"
+    for element in elements:
+        prompt = f"Given the following HTML attributes: {element['attributes']}, classify the type of element (e.g., button, input, link) and suggest an XPath."
+        response = openai.Completion.create(engine="text-davinci-003", prompt=prompt, max_tokens=100)
+        element['classification'] = response.choices[0].text.strip()
+    return elements
+
+# Generate POM
+def generate_pom(elements, class_name="GeneratedPage"):
+    pom_template = f"class {class_name}:\n    def __init__(self, driver):\n        self.driver = driver\n\n"
+    for element in elements:
+        if 'classification' in element:
+            pom_template += f"    def {element['classification'].replace(' ', '_')}:\n"
+            pom_template += f"        return self.driver.find_element(By.XPATH, \"{element['xpath']}\")\n\n"
+    return pom_template
+
+# Run
+url = "https://example.com"
+elements = extract_elements(url)
+classified_elements = classify_elements(elements)
+pom_code = generate_pom(classified_elements)
+print(pom_code)
