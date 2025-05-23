@@ -1,0 +1,38 @@
+import java.util.*;
+
+public class CompareListsExample {
+
+    public static void main(String[] args) {
+        // Expected list of strings (e.g., your test expectations)
+        List<String> expectedList = Arrays.asList(
+            "Apple", "Banana", "Orange", "Mango"
+        );
+
+        // Actual list of strings from PDF (simulated here)
+        List<String> actualList = Arrays.asList(
+            "Mango", "Banana", "Orange", "Apple", "Apple" // contains a duplicate
+        );
+
+        // Convert both lists to sets to ignore order and duplicates
+        Set<String> expectedSet = new HashSet<>(expectedList);
+        Set<String> actualSet = new HashSet<>(actualList);
+
+        // Compare the sets
+        boolean isEqual = expectedSet.equals(actualSet);
+
+        // Output result
+        System.out.println("Are the lists equal (ignoring order and duplicates)? " + isEqual);
+
+        // Optional: Print differences
+        if (!isEqual) {
+            Set<String> missingInActual = new HashSet<>(expectedSet);
+            missingInActual.removeAll(actualSet);
+
+            Set<String> unexpectedInActual = new HashSet<>(actualSet);
+            unexpectedInActual.removeAll(expectedSet);
+
+            System.out.println("Missing in actual: " + missingInActual);
+            System.out.println("Unexpected in actual: " + unexpectedInActual);
+        }
+    }
+}
