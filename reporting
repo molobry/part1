@@ -1,0 +1,69 @@
+Maven dependency
+<dependency>
+  <groupId>org.apache.logging.log4j</groupId>
+  <artifactId>log4j-core</artifactId>
+  <version>2.22.1</version>
+</dependency>
+
+2️⃣ Create a log file per test run
+
+Use a timestamp in the filename so every suite run gets its own file.
+
+log4j2.xml (in src/test/resources)
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+        <Property name="logDir">logs</Property>
+        <Property name="logFileName">
+            run-${date:yyyy-MM-dd_HH-mm-ss}.log
+        </Property>
+    </Properties>
+
+    <Appenders>
+        <File name="FileLogger"
+              fileName="${logDir}/${logFileName}">
+            <PatternLayout
+                pattern="%d{yyyy-MM-dd HH:mm:ss} | %-5level | %msg%n"/>
+        </File>
+    </Appenders>
+
+    <Loggers>
+        <Root level="info">
+            <AppenderRef ref="FileLogger"/>
+        </Root>
+    </Loggers>
+</Configuration>
+
+
+📁 Result:
+
+logs/
+ └── run-2026-01-30_14-22-05.log
+
+3️⃣ Log Scenario info using Cucumber Hooks
+Hooks.java
+import io.cucumber.java.Before;
+import io.cucumber.java.After;
+import io.cucumber.java.Scenario;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+public class Hooks {
+
+    private static final Logger log =
+            LogManager.getLogger(Hooks.class);
+
+    @Before
+    public void beforeScenario(Scenario scenario) {
+        log.info("=======================================");
+        log.info("Scenario STARTED: {}", scenario.getName());
+        log.info("Tags: {}", scenario.getSourceTagNames());
+    }
+
+    @After
+    public void afterScenario(Scenario scenario) {
+        log.info("Scenario FINISHED: {}", scenario.getName());
+        log.info("Status: {}", scenario.getStatus());
+        log.info("=======================================");
+    }
+}
