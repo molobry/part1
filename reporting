@@ -12,26 +12,38 @@ Use a timestamp in the filename so every suite run gets its own file.
 log4j2.xml (in src/test/resources)
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
+
     <Properties>
-        <Property name="logDir">logs</Property>
-        <Property name="logFileName">
+        <Property name="logName">
             run-${date:yyyy-MM-dd_HH-mm-ss}.log
         </Property>
     </Properties>
 
     <Appenders>
-        <File name="FileLogger"
-              fileName="${logDir}/${logFileName}">
+
+        <!-- Logs folder (local runs) -->
+        <File name="LogsFolder"
+              fileName="logs/${logName}">
             <PatternLayout
-                pattern="%d{yyyy-MM-dd HH:mm:ss} | %-5level | %msg%n"/>
+                pattern="%d{HH:mm:ss} | %-5level | %c | %msg%n"/>
         </File>
+
+        <!-- Target folder (CI / Maven) -->
+        <File name="TargetFolder"
+              fileName="target/${logName}">
+            <PatternLayout
+                pattern="%d{HH:mm:ss} | %-5level | %c | %msg%n"/>
+        </File>
+
     </Appenders>
 
     <Loggers>
         <Root level="info">
-            <AppenderRef ref="FileLogger"/>
+            <AppenderRef ref="LogsFolder"/>
+            <AppenderRef ref="TargetFolder"/>
         </Root>
     </Loggers>
+
 </Configuration>
 
 
