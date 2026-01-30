@@ -1,0 +1,12 @@
+@AfterAll
+public static void generateSummary() throws IOException {
+    Properties props = new Properties();
+    props.setProperty("Execution Finished", LocalDateTime.now().toString());
+    props.setProperty("Browser", System.getProperty("browser"));
+    props.setProperty("Environment", "QA");
+
+    File file = new File("target/classification.properties");
+    try (FileOutputStream fos = new FileOutputStream(file)) {
+        props.store(fos, "Execution Summary");
+    }
+}
