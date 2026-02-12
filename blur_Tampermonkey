@@ -1,0 +1,56 @@
+// ==UserScript==
+// @name         Blur sensitive numbers (####-########)
+// @match        *://*/*
+// @run-at       document-end
+// ==/UserScript==
+
+(function () {
+  const regex = /\b(\d{4}-\d{8})\b/g;
+
+  const style = document.createElement("style");
+  style.textContent = `
+    .tm-blur-sensitive {
+      filter: blur(6px);
+      cursor: pointer;
+    }
+    .tm-blur-sensitive:hover {
+      filter: none;
+    }
+  `;
+  document.head.appendChild(style);
+
+  function blurTextNode(node) {
+    if (!node.nodeValue || !regex.test(node.nodeValue)) return;
+
+    const span = document.createElement("span");
+    span.innerHTML = node.nodeValue.replace(regex, match => {
+      return `<span class="tm-blur-sensitive">${match}</span>`;
+    });
+
+    node.parentNode.replaceChild(span, node);
+  }
+
+  function walk(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      blurTextNode(node);
+    } else if (
+      node.nodeType === Node.ELEMENT_NODE &&
+      !["SCRIPT", "STYLE", "TEXTAREA", "INPUT"].includes(node.tagName)
+    ) {
+      node.childNodes.forEach(walk);
+    }
+  }
+
+  walk(document.body);
+
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+      mutation.addedNodes.forEach(walk);
+    });
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+})();
