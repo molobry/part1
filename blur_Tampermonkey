@@ -1,11 +1,12 @@
 // ==UserScript==
-// @name         Blur sensitive numbers (####-########)
+// @name         Blur sensitive numbers (####-######## / #### ########)
 // @match        *://*/*
 // @run-at       document-end
 // ==/UserScript==
 
 (function () {
-  const regex = /\b(\d{4}-\d{8})\b/g;
+  // 4 digits + (space or dash) + 8 digits
+  const regex = /\b(\d{4}[- ]\d{8})\b/g;
 
   const style = document.createElement("style");
   style.textContent = `
