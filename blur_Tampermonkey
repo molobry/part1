@@ -5,8 +5,8 @@
 // ==/UserScript==
 
 (function () {
-  // 4 digits + (space or dash) + 8 digits
-  const regex = /\b(\d{4}[- ]\d{8})\b/g;
+  // 4 digits + dash OR space + 8 digits
+  const regex = /\b\d{4}[- ]\d{8}\b/g;
 
   const style = document.createElement("style");
   style.textContent = `
@@ -21,14 +21,17 @@
   document.head.appendChild(style);
 
   function blurTextNode(node) {
-    if (!node.nodeValue || !regex.test(node.nodeValue)) return;
+    if (!node.nodeValue) return;
 
-    const span = document.createElement("span");
-    span.innerHTML = node.nodeValue.replace(regex, match => {
-      return `<span class="tm-blur-sensitive">${match}</span>`;
-    });
+    const replaced = node.nodeValue.replace(regex, match =>
+      `<span class="tm-blur-sensitive">${match}</span>`
+    );
 
-    node.parentNode.replaceChild(span, node);
+    if (replaced === node.nodeValue) return;
+
+    const wrapper = document.createElement("span");
+    wrapper.innerHTML = replaced;
+    node.parentNode.replaceChild(wrapper, node);
   }
 
   function walk(node) {
