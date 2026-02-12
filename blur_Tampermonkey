@@ -1,12 +1,11 @@
 // ==UserScript==
-// @name         Blur sensitive numbers (####-######## / #### ########)
+// @name         Blur sensitive numbers (robust)
 // @match        *://*/*
 // @run-at       document-end
 // ==/UserScript==
 
 (function () {
-  // 4 digits + dash OR space + 8 digits
-  const regex = /\b\d{4}[- ]\d{8}\b/g;
+  const regex = /\b\d{4}[\u00A0\s-]\d{8}\b/g;
 
   const style = document.createElement("style");
   style.textContent = `
@@ -20,37 +19,57 @@
   `;
   document.head.appendChild(style);
 
-  function blurTextNode(node) {
-    if (!node.nodeValue) return;
-
-    const replaced = node.nodeValue.replace(regex, match =>
-      `<span class="tm-blur-sensitive">${match}</span>`
+  function processElement(el) {
+    const walker = document.createTreeWalker(
+      el,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          if (
+            node.parentNode &&
+            node.parentNode.classList &&
+            node.parentNode.classList.contains("tm-blur-sensitive")
+          ) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
     );
 
-    if (replaced === node.nodeValue) return;
+    const textNodes = [];
+    let node;
+    while ((node = walker.nextNode())) {
+      textNodes.push(node);
+    }
 
-    const wrapper = document.createElement("span");
-    wrapper.innerHTML = replaced;
-    node.parentNode.replaceChild(wrapper, node);
-  }
+    for (let i = 0; i < textNodes.length - 1; i++) {
+      const combined =
+        textNodes[i].nodeValue + textNodes[i + 1].nodeValue;
 
-  function walk(node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      blurTextNode(node);
-    } else if (
-      node.nodeType === Node.ELEMENT_NODE &&
-      !["SCRIPT", "STYLE", "TEXTAREA", "INPUT"].includes(node.tagName)
-    ) {
-      node.childNodes.forEach(walk);
+      if (!regex.test(combined)) continue;
+
+      const span = document.createElement("span");
+      span.className = "tm-blur-sensitive";
+      span.textContent = combined;
+
+      textNodes[i].parentNode.insertBefore(span, textNodes[i]);
+      textNodes[i].remove();
+      textNodes[i + 1].remove();
     }
   }
 
-  walk(document.body);
+  processElement(document.body);
 
   const observer = new MutationObserver(mutations => {
-    mutations.forEach(mutation => {
-      mutation.addedNodes.forEach(walk);
-    });
+    for (const m of mutations) {
+      m.addedNodes.forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          processElement(node);
+        }
+      });
+    }
   });
 
   observer.observe(document.body, {
