@@ -1,0 +1,25 @@
+#########1. Allow third-party cookies in browser (most common fix)#########
+
+ChromeOptions options = new ChromeOptions();
+options.addArguments("--disable-features=SameSiteByDefaultCookies,CookiesWithoutSameSiteMustBeSecure");
+options.addArguments("--disable-web-security");
+options.addArguments("--allow-running-insecure-content");
+
+WebDriver driver = new ChromeDriver(options);
+
+
+#########2. Use a real user profile (keeps login session)#########
+ChromeOptions options = new ChromeOptions();
+options.addArguments("user-data-dir=/path/to/your/chrome/profile");
+
+WebDriver driver = new ChromeDriver(options);
+
+
+#########5. Manually inject cookies (advanced)#########
+
+driver.get("https://third-party.com");
+
+Cookie cookie = new Cookie("session", "value");
+driver.manage().addCookie(cookie);
+
+driver.navigate().refresh();
