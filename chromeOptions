@@ -1,0 +1,15 @@
+ChromeOptions options = new ChromeOptions();
+options.addArguments(
+    "--disable-gpu",
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-extensions",
+    "--disable-infobars",
+    "--disable-notifications",
+    "--disable-background-networking",
+    "--disable-sync",
+    "--metrics-recording-only",
+    "--mute-audio",
+    "--no-first-run",
+    "--disable-features=Translate,BackForwardCache"
+);
